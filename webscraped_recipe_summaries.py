@@ -68,7 +68,7 @@ try:
                 for ingredient in ingredients:
                     ingredients_list.append(ingredient.text)
                 string_ingredients = ', '.join(ingredients_list)
-                result+=f'Ingredients: {string_ingredients}\n\n'
+                result+=f'Ingredients: {string_ingredients}\nLink to recipe:https://www.epicurious.com{dish_link}\n\n'
 finally:
     print(f'Results saved to {query} recipes.txt')
     with open(f'{query} recipes.txt', 'w', encoding='utf-8') as p:
