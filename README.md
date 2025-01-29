@@ -9,4 +9,5 @@ Afterwards, webscraping was utilised to extract the following:
 4. Serving size
 5. Ingredients list
 6. Reviews (used to generate scores for attributes of the recipe -- 'Ease of Cooking', 'Taste', 'Versatility', 'Generic', with the help of a Random Forest model which uses 50 reviews from various Epicurious recipes as training data) 
+
 These information are then written into a text file for users' perusal.
