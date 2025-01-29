@@ -28,11 +28,10 @@ def info_extraction(link):
     infos = soup.find_all('p', class_="BaseWrap-sc-gjQpdd BaseText-ewhhUZ InfoSliceValue-tfmqg iUEiRd bbekcU fkSlPp")
     ingredients = soup.find_all('div', class_="BaseWrap-sc-gjQpdd BaseText-ewhhUZ Description-cSrMCf iUEiRd bGCtOd fsKnGI")
     driver.quit()
-    print(dish_name, reviews_extract, rating, titles, infos, ingredients)
     return dish_name, reviews_extract, rating, titles, infos, ingredients
 
-def criteria_score(reviews_from_recipe):
-    reviews_data = pd.read_csv("C:/Users/jiayu/Downloads/NUS/DSA additional materials/training_recipe.csv")
+def estimator(file_name): 
+    reviews_data = pd.read_csv(file_name)
     reviews = reviews_data['Review']
     criteria = reviews_data[['Ease of cooking', 'Taste', 'Versatility', 'Generic']]
     reviews_train, reviews_test, criteria_train, criteria_test = train_test_split(reviews, criteria, random_state=1)
@@ -40,7 +39,6 @@ def criteria_score(reviews_from_recipe):
     reviews_train_tfidf = tfidf.fit_transform(reviews_train)
     reviews_test_tfidf = tfidf.transform(reviews_test)
     sample_reviews = tfidf.transform(reviews)
-    reviews_tfidf = tfidf.transform(reviews_from_recipe)
     avg_mse = {}
     for i in [10,50,100,200,300,400,500]:
         rf_regressor = RandomForestRegressor(n_estimators=i, random_state=1)
@@ -53,10 +51,14 @@ def criteria_score(reviews_from_recipe):
             mses.append(mse)
         avg_mse[i] = sum(mses)/len(mses)
     estimator = min(avg_mse, key=avg_mse.get)
-    actual_rf_regressor = RandomForestRegressor(n_estimators=estimator, random_state=1)
-    actual_multioutput_regressor = MultiOutputRegressor(actual_rf_regressor)
-    actual_multioutput_regressor.fit(sample_reviews, criteria)
-    criteria_pred = multioutput_regressor.predict(reviews_tfidf)
+    final_rf_regressor = RandomForestRegressor(n_estimators=estimator, random_state=1)
+    final_model = MultiOutputRegressor(final_rf_regressor)
+    final_model.fit(sample_reviews, criteria)
+    return tfidf, final_model  
+
+def criteria_score(reviews_from_recipe, tfidf, final_model):
+    reviews_tfidf = tfidf.transform(reviews_from_recipe)
+    criteria_pred = final_model.predict(reviews_tfidf)
     criteria_pred = pd.DataFrame(criteria_pred, columns=['Ease of cooking', 'Taste', 'Versatility', 'Generic'])
     average_scores = criteria_pred.mean()
     return average_scores
@@ -73,6 +75,7 @@ main_search_text = requests.get(f'https://www.epicurious.com/search?q={query_key
 main_soup = BeautifulSoup(main_search_text, 'lxml')
 dishes = main_soup.find_all('div', class_="ClampContent-hilPkr fvKowN")
 result = ''
+tfidf, final_model = estimator("training_recipe.csv")
 try:
     for dish in dishes:
         if dish.a != None:
@@ -121,7 +124,7 @@ try:
                     for review in reviews_extract:
                         reviews_from_recipe.append(review.text)
                     reviews_from_recipe = pd.DataFrame(reviews_from_recipe, columns=['Review'])
-                    average_scores = criteria_score(reviews_from_recipe['Review'])
+                    average_scores = criteria_score(reviews_from_recipe['Review'], tfidf, final_model)
                     result+='\n'.join([f"{col}: {score:.5f}" for col, score in average_scores.items()])
                 result+=f'\nLink to recipe: https://www.epicurious.com{dish_link}\n\n'                
                 
